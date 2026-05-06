@@ -31,10 +31,12 @@ st.write("---")
 c3, c4 = st.columns(2)
 with c3:
     org_designation = st.selectbox("Organisation Signatory Designation", designation_options)
-    if org_designation == "Other": org_designation = st.text_input("Enter Custom Org Designation")
+    if org_designation == "Other": 
+        org_designation = st.text_input("Enter Custom Org Designation")
 with c4:
     aer_designation = st.selectbox("Aertrip Signatory Designation", designation_options, index=4)
-    if aer_designation == "Other": aer_designation = st.text_input("Enter Custom Aertrip Designation", value="Manager")
+    if aer_designation == "Other": 
+        aer_designation = st.text_input("Enter Custom Aertrip Designation", value="Manager")
 
 # -----------------------------
 # 2. ANNEXURE SETTINGS
@@ -54,7 +56,8 @@ if annexure_b_choice == "Yes":
     num_parties = st.number_input("How many related parties?", min_value=1, step=1)
     for i in range(int(num_parties)):
         name = st.text_input(f"Related Party {i+1} Name", key=f"party_{i}")
-        if name: party_names.append(name)
+        if name: 
+            party_names.append(name)
 
 # -----------------------------
 # 3. GENERATION ENGINE
@@ -66,49 +69,49 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
         try:
             BASE_DIR = os.path.dirname(os.path.abspath(__file__))
             template_path = os.path.join(BASE_DIR, "template.docx")
-            annexure_a_file_path = os.path.join(BASE_DIR, "annexure_a.docx") # Fixed Name
+            ann_a_path = os.path.join(BASE_DIR, "annexure_a.docx")
 
             doc = DocxTemplate(template_path)
 
-            # Preamble lines logic [cite: 109, 20]
-            ann_a_line = "The implications of Aertrip Fees are outlined in Annexure A" if annexure_a_choice == "Yes" else "" [cite: 109]
-            ann_b_line = "and its related entities as mentioned in Annexure B" if annexure_b_choice == "Yes" else "" [cite: 20]
+            # Preamble lines logic
+            ann_a_line = "The implications of Aertrip Fees are outlined in Annexure A" if annexure_a_choice == "Yes" else ""
+            ann_b_line = "and its related entities as mentioned in Annexure B" if annexure_b_choice == "Yes" else ""
 
             context = {
-                "org_name": org_name, [cite: 13, 266, 269]
-                "date": doc_date.strftime('%d %B %Y'), [cite: 18]
-                "document_type": doc_type, [cite: 20]
-                "document_number": doc_number, [cite: 20]
-                "address": address, [cite: 20, 273]
-                "email": email, [cite: 272]
-                "org_sign_name": org_sign_name, [cite: 270]
-                "org_sign_designation": org_designation, [cite: 266, 271]
-                "aer_sign_name": aer_sign_name, [cite: 277]
-                "aer_sign_designation": aer_designation, [cite: 278]
-                "annexure_a_line": ann_a_line, [cite: 109]
-                "annexure_b_line": ann_b_line [cite: 20]
+                "org_name": org_name,
+                "date": doc_date.strftime('%d %B %Y'),
+                "document_type": doc_type,
+                "document_number": doc_number,
+                "address": address,
+                "email": email,
+                "org_sign_name": org_sign_name,
+                "org_sign_designation": org_designation,
+                "aer_sign_name": aer_sign_name,
+                "aer_sign_designation": aer_designation,
+                "annexure_a_line": ann_a_line,
+                "annexure_b_line": ann_b_line
             }
 
             # --- Annexure A Logic ---
-            if annexure_a_choice == "Yes" and os.path.exists(annexure_a_file_path):
-                sub_doc_a = doc.new_subdoc(annexure_a_file_path)
-                context["annexure_a_section"] = sub_doc_a [cite: 1, 262]
+            if annexure_a_choice == "Yes" and os.path.exists(ann_a_path):
+                sub_doc_a = doc.new_subdoc(ann_a_path)
+                context["annexure_a_section"] = sub_doc_a
             else:
-                context["annexure_a_section"] = "" [cite: 1, 262]
+                context["annexure_a_section"] = ""
 
             # --- Annexure B Logic ---
             if annexure_b_choice == "Yes" and party_names:
                 b_buffer = io.BytesIO()
                 temp_b_doc = Document()
-                temp_b_doc.add_page_break() # Adds break only if Annexure B exists
+                temp_b_doc.add_page_break() 
                 temp_b_doc.add_heading("ANNEXURE B - CLIENT’S ENTITIES", level=1)
                 for i, name in enumerate(party_names, 1):
                     temp_b_doc.add_paragraph(f"{i}. {name}")
                 temp_b_doc.save(b_buffer)
                 b_buffer.seek(0)
-                context["annexure_b_section"] = doc.new_subdoc(b_buffer) [cite: 263]
+                context["annexure_b_section"] = doc.new_subdoc(b_buffer)
             else:
-                context["annexure_b_section"] = "" [cite: 263]
+                context["annexure_b_section"] = ""
 
             doc.render(context)
 
