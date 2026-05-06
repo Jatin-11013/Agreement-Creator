@@ -39,12 +39,10 @@ designation_options = [
 ]
 
 org_designation = st.selectbox("Organisation Signing Designation", designation_options)
-
 if org_designation == "Other":
     org_designation = st.text_input("Enter Organisation Designation")
 
 aer_designation = st.selectbox("Aertrip Signing Designation", designation_options)
-
 if aer_designation == "Other":
     aer_designation = st.text_input("Enter Aertrip Designation")
 
@@ -61,7 +59,7 @@ with col4:
     annexure_b = st.selectbox("Annexure B: Related Parties", ["Yes", "No"])
 
 # -----------------------------
-# ANNEXURE B DYNAMIC INPUTS
+# ANNEXURE B INPUTS
 # -----------------------------
 
 party_names = []
@@ -80,20 +78,14 @@ if annexure_b == "Yes":
 if st.button("Generate Agreement"):
 
     try:
-        # 🔥 SAFE PATH (CLOUD + LOCAL)
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
         template_path = os.path.join(BASE_DIR, "template.docx")
         annex_path = os.path.join(BASE_DIR, "annexure_a.docx")
 
-        # Debug (optional)
-        # st.write("Files:", os.listdir(BASE_DIR))
-
-        # Load template
         doc = Document(template_path)
 
         # -----------------------------
-        # BASIC REPLACEMENTS
+        # TEXT REPLACEMENT (FORMATTING SAFE)
         # -----------------------------
         replacements = {
             "{{org_name}}": org_name,
@@ -110,61 +102,100 @@ if st.button("Generate Agreement"):
 
         for para in doc.paragraphs:
             for key, value in replacements.items():
-                if key in para.text:
-                    para.text = para.text.replace(key, value if value else "")
+                for run in para.runs:
+                    if key in run.text:
+                        run.text = run.text.replace(key, value if value else "")
 
         # -----------------------------
         # ANNEXURE A LINE
         # -----------------------------
-        annexure_a_line = (
-            "The implications of Aertrip Fees are outlined in Annexure A"
-            if annexure_a == "Yes" else ""
-        )
-
         for para in doc.paragraphs:
-            if "{{ANNEXURE_A_LINE}}" in para.text:
-                para.text = para.text.replace("{{ANNEXURE_A_LINE}}", annexure_a_line)
+            for run in para.runs:
+                if "{{ANNEXURE_A_LINE}}" in run.text:
+                    if annexure_a == "Yes":
+                        run.text = run.text.replace(
+                            "{{ANNEXURE_A_LINE}}",
+                            "The implications of Aertrip Fees are outlined in Annexure A"
+                        )
+                    else:
+                        run.text = run.text.replace("{{ANNEXURE_A_LINE}}", "")
 
         # -----------------------------
         # ANNEXURE B LINE
         # -----------------------------
-        annexure_b_line = (
-            "and its related entities as mentioned in Annexure B"
-            if annexure_b == "Yes" else ""
-        )
-
         for para in doc.paragraphs:
-            if "{{ANNEXURE_B_LINE}}" in para.text:
-                para.text = para.text.replace("{{ANNEXURE_B_LINE}}", annexure_b_line)
+            for run in para.runs:
+                if "{{ANNEXURE_B_LINE}}" in run.text:
+                    if annexure_b == "Yes":
+                        run.text = run.text.replace(
+                            "{{ANNEXURE_B_LINE}}",
+                            "and its related entities as mentioned in Annexure B"
+                        )
+                    else:
+                        run.text = run.text.replace("{{ANNEXURE_B_LINE}}", "")
 
         # -----------------------------
-        # REMOVE PLACEHOLDERS
-        # -----------------------------
-        for para in doc.paragraphs:
-            para.text = para.text.replace("{{ANNEXURE_A_SECTION}}", "")
-            para.text = para.text.replace("{{ANNEXURE_B_SECTION}}", "")
-
-        # -----------------------------
-        # ANNEXURE A INSERT
+        # ANNEXURE A INSERT AT PLACEHOLDER
         # -----------------------------
         if annexure_a == "Yes":
             annex_doc = Document(annex_path)
 
-            doc.add_page_break()
+            for para in doc.paragraphs:
+                if "{{ANNEXURE_A_SECTION}}" in para.text:
 
-            for element in annex_doc.element.body:
-                doc.element.body.append(element)
+                    para.text = ""
+
+                    parent = para._element.getparent()
+                    index = parent.index(para._element)
+
+                    for element in annex_doc.element.body:
+                        index += 1
+                        parent.insert(index, element)
+
+                    break
+        else:
+            for para in doc.paragraphs:
+                if "{{ANNEXURE_A_SECTION}}" in para.text:
+                    para.text = ""
 
         # -----------------------------
-        # ANNEXURE B INSERT
+        # ANNEXURE B INSERT AT PLACEHOLDER
         # -----------------------------
         if annexure_b == "Yes":
-            doc.add_page_break()
-            doc.add_paragraph("ANNEXURE B - CLIENT’S ENTITIES\n")
 
-            for i, name in enumerate(party_names, 1):
-                if name:
-                    doc.add_paragraph(f"{i}. {name}")
+            for para in doc.paragraphs:
+                if "{{ANNEXURE_B_SECTION}}" in para.text:
+
+                    para.text = ""
+
+                    parent = para._element.getparent()
+                    index = parent.index(para._element)
+
+                    from docx.oxml import OxmlElement
+                    from docx.text.paragraph import Paragraph
+
+                    # Heading
+                    new_p = OxmlElement("w:p")
+                    parent.insert(index + 1, new_p)
+                    paragraph = Paragraph(new_p, doc)
+                    paragraph.add_run("ANNEXURE B - CLIENT’S ENTITIES\n")
+
+                    index += 1
+
+                    # List
+                    for i, name in enumerate(party_names, 1):
+                        if name:
+                            new_p = OxmlElement("w:p")
+                            parent.insert(index + 1, new_p)
+                            paragraph = Paragraph(new_p, doc)
+                            paragraph.add_run(f"{i}. {name}")
+                            index += 1
+
+                    break
+        else:
+            for para in doc.paragraphs:
+                if "{{ANNEXURE_B_SECTION}}" in para.text:
+                    para.text = ""
 
         # -----------------------------
         # SAVE FILE
@@ -185,4 +216,4 @@ if st.button("Generate Agreement"):
         st.success("✅ Agreement Generated Successfully!")
 
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"❌ Error: {e}")
