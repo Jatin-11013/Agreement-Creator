@@ -1,4 +1,3 @@
-!pip install streamlit python-docx
 import streamlit as st
 from docx import Document
 from datetime import date
