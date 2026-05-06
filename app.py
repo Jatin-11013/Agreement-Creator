@@ -85,7 +85,7 @@ if st.button("Generate Agreement"):
         doc = Document(template_path)
 
         # -----------------------------
-        # TEXT REPLACEMENT (FORMATTING SAFE)
+        # TEXT REPLACEMENT (FULL TEXT METHOD)
         # -----------------------------
         replacements = {
             "{{org_name}}": org_name,
@@ -101,41 +101,36 @@ if st.button("Generate Agreement"):
         }
 
         for para in doc.paragraphs:
+            text = para.text
+
             for key, value in replacements.items():
-                for run in para.runs:
-                    if key in run.text:
-                        run.text = run.text.replace(key, value if value else "")
+                if key in text:
+                    text = text.replace(key, value if value else "")
+
+            # Annexure A line
+            if "{{ANNEXURE_A_LINE}}" in text:
+                if annexure_a == "Yes":
+                    text = text.replace(
+                        "{{ANNEXURE_A_LINE}}",
+                        "The implications of Aertrip Fees are outlined in Annexure A"
+                    )
+                else:
+                    text = text.replace("{{ANNEXURE_A_LINE}}", "")
+
+            # Annexure B line
+            if "{{ANNEXURE_B_LINE}}" in text:
+                if annexure_b == "Yes":
+                    text = text.replace(
+                        "{{ANNEXURE_B_LINE}}",
+                        "and its related entities as mentioned in Annexure B"
+                    )
+                else:
+                    text = text.replace("{{ANNEXURE_B_LINE}}", "")
+
+            para.text = text
 
         # -----------------------------
-        # ANNEXURE A LINE
-        # -----------------------------
-        for para in doc.paragraphs:
-            for run in para.runs:
-                if "{{ANNEXURE_A_LINE}}" in run.text:
-                    if annexure_a == "Yes":
-                        run.text = run.text.replace(
-                            "{{ANNEXURE_A_LINE}}",
-                            "The implications of Aertrip Fees are outlined in Annexure A"
-                        )
-                    else:
-                        run.text = run.text.replace("{{ANNEXURE_A_LINE}}", "")
-
-        # -----------------------------
-        # ANNEXURE B LINE
-        # -----------------------------
-        for para in doc.paragraphs:
-            for run in para.runs:
-                if "{{ANNEXURE_B_LINE}}" in run.text:
-                    if annexure_b == "Yes":
-                        run.text = run.text.replace(
-                            "{{ANNEXURE_B_LINE}}",
-                            "and its related entities as mentioned in Annexure B"
-                        )
-                    else:
-                        run.text = run.text.replace("{{ANNEXURE_B_LINE}}", "")
-
-        # -----------------------------
-        # ANNEXURE A INSERT AT PLACEHOLDER
+        # ANNEXURE A INSERT
         # -----------------------------
         if annexure_a == "Yes":
             annex_doc = Document(annex_path)
@@ -159,9 +154,11 @@ if st.button("Generate Agreement"):
                     para.text = ""
 
         # -----------------------------
-        # ANNEXURE B INSERT AT PLACEHOLDER
+        # ANNEXURE B INSERT
         # -----------------------------
         if annexure_b == "Yes":
+            from docx.oxml import OxmlElement
+            from docx.text.paragraph import Paragraph
 
             for para in doc.paragraphs:
                 if "{{ANNEXURE_B_SECTION}}" in para.text:
@@ -170,9 +167,6 @@ if st.button("Generate Agreement"):
 
                     parent = para._element.getparent()
                     index = parent.index(para._element)
-
-                    from docx.oxml import OxmlElement
-                    from docx.text.paragraph import Paragraph
 
                     # Heading
                     new_p = OxmlElement("w:p")
