@@ -71,9 +71,10 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
             template_path = os.path.join(BASE_DIR, "template.docx")
             ann_a_path = os.path.join(BASE_DIR, "annexure_a.docx")
 
+            # Load Template
             doc = DocxTemplate(template_path)
 
-            # Preamble lines logic
+            # Conditional Preamble Text
             ann_a_line = "The implications of Aertrip Fees are outlined in Annexure A" if annexure_a_choice == "Yes" else ""
             ann_b_line = "and its related entities as mentioned in Annexure B" if annexure_b_choice == "Yes" else ""
 
@@ -92,14 +93,15 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
                 "annexure_b_line": ann_b_line
             }
 
-            # --- Annexure A Logic ---
+            # Handle Annexure A
             if annexure_a_choice == "Yes" and os.path.exists(ann_a_path):
+                # Note: hum annexure_a file ke content ko hi subdoc banate hain
                 sub_doc_a = doc.new_subdoc(ann_a_path)
                 context["annexure_a_section"] = sub_doc_a
             else:
                 context["annexure_a_section"] = ""
 
-            # --- Annexure B Logic ---
+            # Handle Annexure B
             if annexure_b_choice == "Yes" and party_names:
                 b_buffer = io.BytesIO()
                 temp_b_doc = Document()
@@ -113,13 +115,15 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
             else:
                 context["annexure_b_section"] = ""
 
+            # Render
             doc.render(context)
 
+            # Final Save
             final_buffer = io.BytesIO()
             doc.save(final_buffer)
             final_buffer.seek(0)
 
-            st.success("✅ Agreement generated!")
+            st.success("✅ Agreement generated successfully!")
             st.download_button(
                 label="📥 Download Word File",
                 data=final_buffer,
@@ -129,3 +133,4 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
 
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
+            st.info("Tip: Make sure to run 'pip install docxcompose' in your terminal.")
