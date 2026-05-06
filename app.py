@@ -2,6 +2,7 @@ import streamlit as st
 from docx import Document
 from datetime import date
 import io
+import os
 
 st.set_page_config(layout="wide")
 st.title("Agreement Generator")
@@ -78,99 +79,110 @@ if annexure_b == "Yes":
 
 if st.button("Generate Agreement"):
 
-    # Load template
-    doc = Document("template.docx")
+    try:
+        # 🔥 SAFE PATH (CLOUD + LOCAL)
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    # -----------------------------
-    # BASIC REPLACEMENTS
-    # -----------------------------
-    replacements = {
-        "{{org_name}}": org_name,
-        "{{date}}": str(doc_date),
-        "{{document_type}}": doc_type,
-        "{{document_number}}": doc_number,
-        "{{address}}": address,
-        "{{email}}": email,
-        "{{org_sign_name}}": org_sign_name,
-        "{{org_sign_designation}}": org_designation,
-        "{{aer_sign_name}}": aer_sign_name,
-        "{{aer_sign_designation}}": aer_designation,
-    }
+        template_path = os.path.join(BASE_DIR, "template.docx")
+        annex_path = os.path.join(BASE_DIR, "annexure_a.docx")
 
-    # Replace text
-    for para in doc.paragraphs:
-        for key, value in replacements.items():
-            if key in para.text:
-                para.text = para.text.replace(key, value if value else "")
+        # Debug (optional)
+        # st.write("Files:", os.listdir(BASE_DIR))
 
-    # -----------------------------
-    # ANNEXURE A LINE
-    # -----------------------------
-    if annexure_a == "Yes":
-        annexure_a_line = "The implications of Aertrip Fees are outlined in Annexure A"
-    else:
-        annexure_a_line = ""
+        # Load template
+        doc = Document(template_path)
 
-    for para in doc.paragraphs:
-        if "{{ANNEXURE_A_LINE}}" in para.text:
-            para.text = para.text.replace("{{ANNEXURE_A_LINE}}", annexure_a_line)
+        # -----------------------------
+        # BASIC REPLACEMENTS
+        # -----------------------------
+        replacements = {
+            "{{org_name}}": org_name,
+            "{{date}}": str(doc_date),
+            "{{document_type}}": doc_type,
+            "{{document_number}}": doc_number,
+            "{{address}}": address,
+            "{{email}}": email,
+            "{{org_sign_name}}": org_sign_name,
+            "{{org_sign_designation}}": org_designation,
+            "{{aer_sign_name}}": aer_sign_name,
+            "{{aer_sign_designation}}": aer_designation,
+        }
 
-    # -----------------------------
-    # ANNEXURE B LINE
-    # -----------------------------
-    if annexure_b == "Yes":
-        annexure_b_line = "and its related entities as mentioned in Annexure B"
-    else:
-        annexure_b_line = ""
+        for para in doc.paragraphs:
+            for key, value in replacements.items():
+                if key in para.text:
+                    para.text = para.text.replace(key, value if value else "")
 
-    for para in doc.paragraphs:
-        if "{{ANNEXURE_B_LINE}}" in para.text:
-            para.text = para.text.replace("{{ANNEXURE_B_LINE}}", annexure_b_line)
+        # -----------------------------
+        # ANNEXURE A LINE
+        # -----------------------------
+        annexure_a_line = (
+            "The implications of Aertrip Fees are outlined in Annexure A"
+            if annexure_a == "Yes" else ""
+        )
 
-    # -----------------------------
-    # REMOVE PLACEHOLDER TEXTS
-    # -----------------------------
-    for para in doc.paragraphs:
-        para.text = para.text.replace("{{ANNEXURE_A_SECTION}}", "")
-        para.text = para.text.replace("{{ANNEXURE_B_SECTION}}", "")
+        for para in doc.paragraphs:
+            if "{{ANNEXURE_A_LINE}}" in para.text:
+                para.text = para.text.replace("{{ANNEXURE_A_LINE}}", annexure_a_line)
 
-    # -----------------------------
-    # ANNEXURE A INSERT
-    # -----------------------------
-    if annexure_a == "Yes":
-        annex_doc = Document("annexure_a.docx")
+        # -----------------------------
+        # ANNEXURE B LINE
+        # -----------------------------
+        annexure_b_line = (
+            "and its related entities as mentioned in Annexure B"
+            if annexure_b == "Yes" else ""
+        )
 
-        doc.add_page_break()
+        for para in doc.paragraphs:
+            if "{{ANNEXURE_B_LINE}}" in para.text:
+                para.text = para.text.replace("{{ANNEXURE_B_LINE}}", annexure_b_line)
 
-        for element in annex_doc.element.body:
-            doc.element.body.append(element)
+        # -----------------------------
+        # REMOVE PLACEHOLDERS
+        # -----------------------------
+        for para in doc.paragraphs:
+            para.text = para.text.replace("{{ANNEXURE_A_SECTION}}", "")
+            para.text = para.text.replace("{{ANNEXURE_B_SECTION}}", "")
 
-    # -----------------------------
-    # ANNEXURE B INSERT
-    # -----------------------------
-    if annexure_b == "Yes":
-        doc.add_page_break()
-        doc.add_paragraph("ANNEXURE B - CLIENT’S ENTITIES\n")
+        # -----------------------------
+        # ANNEXURE A INSERT
+        # -----------------------------
+        if annexure_a == "Yes":
+            annex_doc = Document(annex_path)
 
-        for i, name in enumerate(party_names, 1):
-            if name:
-                doc.add_paragraph(f"{i}. {name}")
+            doc.add_page_break()
 
-    # -----------------------------
-    # SAVE FILE (IN MEMORY)
-    # -----------------------------
-    buffer = io.BytesIO()
-    doc.save(buffer)
-    buffer.seek(0)
+            for element in annex_doc.element.body:
+                doc.element.body.append(element)
 
-    # -----------------------------
-    # DOWNLOAD BUTTON
-    # -----------------------------
-    file_name = f"{org_name}_Agreement.docx"
+        # -----------------------------
+        # ANNEXURE B INSERT
+        # -----------------------------
+        if annexure_b == "Yes":
+            doc.add_page_break()
+            doc.add_paragraph("ANNEXURE B - CLIENT’S ENTITIES\n")
 
-    st.download_button(
-        label="Download Agreement",
-        data=buffer,
-        file_name=file_name,
-        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    )
+            for i, name in enumerate(party_names, 1):
+                if name:
+                    doc.add_paragraph(f"{i}. {name}")
+
+        # -----------------------------
+        # SAVE FILE
+        # -----------------------------
+        buffer = io.BytesIO()
+        doc.save(buffer)
+        buffer.seek(0)
+
+        file_name = f"{org_name}_Agreement.docx"
+
+        st.download_button(
+            label="Download Agreement",
+            data=buffer,
+            file_name=file_name,
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+
+        st.success("✅ Agreement Generated Successfully!")
+
+    except Exception as e:
+        st.error(f"Error: {e}")
