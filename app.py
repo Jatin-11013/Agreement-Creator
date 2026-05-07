@@ -1,6 +1,8 @@
 import streamlit as st
 from docxtpl import DocxTemplate
 from docx import Document
+from docx import Document as DocxDoc
+from copy import deepcopy
 import io
 import os
 from datetime import date
@@ -67,7 +69,6 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
 
             doc = DocxTemplate(template_path)
 
-            # Conditional Lines for Preamble
             ann_a_line = "The implications of Aertrip Fees are outlined in Annexure A." if annexure_a_choice == "Yes" else ""
             ann_b_line = "and its related entities as mentioned in Annexure B" if annexure_b_choice == "Yes" else ""
 
@@ -86,16 +87,15 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
                 "annexure_b_line": ann_b_line
             }
 
-            # --- Annexure A (always new page if Yes) ---
+            # --- Annexure A ---
             if annexure_a_choice == "Yes" and os.path.exists(ann_a_path):
                 sub_a_doc = Document()
-                sub_a_doc.add_page_break()  # force new page
+                sub_a_doc.add_page_break()
                 source_a = Document(ann_a_path)
                 for element in source_a.element.body:
-                    # skip section properties so footer doesn't change
                     if element.tag.endswith('}sectPr'):
                         continue
-                    sub_a_doc.element.body.append(element)
+                    sub_a_doc.element.body.append(deepcopy(element))
 
                 a_buf = io.BytesIO()
                 sub_a_doc.save(a_buf)
@@ -104,10 +104,10 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
             else:
                 context["annexure_a_section"] = ""
 
-            # --- Annexure B (always new page if Yes) ---
+            # --- Annexure B ---
             if annexure_b_choice == "Yes" and party_names:
                 sub_b_doc = Document()
-                sub_b_doc.add_page_break()  # force new page
+                sub_b_doc.add_page_break()
                 sub_b_doc.add_heading("ANNEXURE B - CLIENT'S ENTITIES", level=1)
                 for i, name in enumerate(party_names, 1):
                     sub_b_doc.add_paragraph(f"{i}. {name}")
@@ -119,11 +119,25 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
             else:
                 context["annexure_b_section"] = ""
 
-            # Render and Save
+            # --- Render ---
             doc.render(context)
 
+            # --- Page Numbering Fix ---
+            temp_buf = io.BytesIO()
+            doc.save(temp_buf)
+            temp_buf.seek(0)
+
+            clean = DocxDoc(temp_buf)
+            ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+
+            for sectPr in clean.element.body.iter(f"{{{ns}}}sectPr"):
+                for pgNumType in sectPr.findall(f"{{{ns}}}pgNumType"):
+                    start_attr = f"{{{ns}}}start"
+                    if start_attr in pgNumType.attrib:
+                        del pgNumType.attrib[start_attr]
+
             final_buffer = io.BytesIO()
-            doc.save(final_buffer)
+            clean.save(final_buffer)
             final_buffer.seek(0)
 
             st.success("✅ Agreement generated successfully!")
