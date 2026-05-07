@@ -23,17 +23,19 @@ with col1:
 with col2:
     address = st.text_area("Registered Address")
     org_sign_name = st.text_input("Organisation Signatory Name")
-    aer_sign_name = st.text_input("Aertrip Signatory Name", value="Luvkesh")
+    aer_sign_name = st.text_input("Aertrip Signatory Name")
 
 designation_options = ["Director", "Partner", "Proprietor", "Vice President - Operations", "Other"]
 st.write("---")
 c3, c4 = st.columns(2)
 with c3:
     org_designation = st.selectbox("Organisation Signatory Designation", designation_options)
-    if org_designation == "Other": org_designation = st.text_input("Enter Custom Org Designation")
+    if org_designation == "Other":
+        org_designation = st.text_input("Enter Custom Org Designation")
 with c4:
     aer_designation = st.selectbox("Aertrip Signing Designation", designation_options, index=4)
-    if aer_designation == "Other": aer_designation = st.text_input("Enter Custom Aertrip Designation", value="Manager")
+    if aer_designation == "Other":
+        aer_designation = st.text_input("Enter Custom Aertrip Designation")
 
 st.write("---")
 st.subheader("Annexure Settings")
@@ -48,7 +50,8 @@ if annexure_b_choice == "Yes":
     num_parties = st.number_input("How many related parties?", min_value=1, step=1)
     for i in range(int(num_parties)):
         name = st.text_input(f"Related Party {i+1} Name", key=f"party_{i}")
-        if name: party_names.append(name)
+        if name:
+            party_names.append(name)
 
 # -----------------------------
 # 2. GENERATION ENGINE
