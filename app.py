@@ -83,16 +83,14 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
                 "annexure_b_line": ann_b_line
             }
 
-            # --- Handle Annexure A ---
+            # --- Annexure A (always new page if Yes) ---
             if annexure_a_choice == "Yes" and os.path.exists(ann_a_path):
-                # Annexure A hamesha naye page se shuru ho
                 sub_a_doc = Document()
-                sub_a_doc.add_page_break()
-                # Annexure A ka content copy karna
+                sub_a_doc.add_page_break()  # force new page
                 source_a = Document(ann_a_path)
                 for element in source_a.element.body:
                     sub_a_doc.element.body.append(element)
-                
+
                 a_buf = io.BytesIO()
                 sub_a_doc.save(a_buf)
                 a_buf.seek(0)
@@ -100,14 +98,14 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
             else:
                 context["annexure_a_section"] = ""
 
-            # --- Handle Annexure B ---
+            # --- Annexure B (always new page if Yes) ---
             if annexure_b_choice == "Yes" and party_names:
                 sub_b_doc = Document()
-                sub_b_doc.add_page_break()
+                sub_b_doc.add_page_break()  # force new page
                 sub_b_doc.add_heading("ANNEXURE B - CLIENT'S ENTITIES", level=1)
                 for i, name in enumerate(party_names, 1):
                     sub_b_doc.add_paragraph(f"{i}. {name}")
-                
+
                 b_buf = io.BytesIO()
                 sub_b_doc.save(b_buf)
                 b_buf.seek(0)
@@ -117,7 +115,7 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
 
             # Render and Save
             doc.render(context)
-            
+
             final_buffer = io.BytesIO()
             doc.save(final_buffer)
             final_buffer.seek(0)
