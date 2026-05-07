@@ -33,7 +33,7 @@ with c3:
     if org_designation == "Other":
         org_designation = st.text_input("Enter Custom Org Designation")
 with c4:
-    aer_designation = st.selectbox("Aertrip Signing Designation", designation_options, index=4)
+    aer_designation = st.selectbox("Aertrip Signing Designation", designation_options)
     if aer_designation == "Other":
         aer_designation = st.text_input("Enter Custom Aertrip Designation")
 
