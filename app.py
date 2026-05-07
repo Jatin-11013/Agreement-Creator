@@ -92,6 +92,9 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
                 sub_a_doc.add_page_break()  # force new page
                 source_a = Document(ann_a_path)
                 for element in source_a.element.body:
+                    # skip section properties so footer doesn't change
+                    if element.tag.endswith('}sectPr'):
+                        continue
                     sub_a_doc.element.body.append(element)
 
                 a_buf = io.BytesIO()
