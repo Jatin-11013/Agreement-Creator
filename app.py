@@ -9,6 +9,11 @@ from datetime import date
 st.set_page_config(page_title="Agreement Generator", layout="wide")
 st.title("📄 Professional Agreement Generator")
 
+def strip_sect_pr(docx_doc):
+    body = docx_doc.element.body
+    for sect in list(body.xpath("./w:sectPr", namespaces=body.nsmap)):
+        body.remove(sect)
+
 # -----------------------------
 # 1. INPUT SECTION
 # -----------------------------
@@ -94,10 +99,11 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
 
                 source_a = Document(ann_a_path)
                 for element in source_a.element.body:
-                    # skip section properties so footer doesn't change
                     if element.tag.endswith('}sectPr'):
                         continue
                     sub_a_doc.element.body.append(element)
+
+                strip_sect_pr(sub_a_doc)
 
                 a_buf = io.BytesIO()
                 sub_a_doc.save(a_buf)
@@ -114,10 +120,7 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
                 for i, name in enumerate(party_names, 1):
                     sub_b_doc.add_paragraph(f"{i}. {name}")
 
-                # remove section properties so numbering doesn't restart
-                for element in list(sub_b_doc.element.body):
-                    if element.tag.endswith('}sectPr'):
-                        sub_b_doc.element.body.remove(element)
+                strip_sect_pr(sub_b_doc)
 
                 b_buf = io.BytesIO()
                 sub_b_doc.save(b_buf)
