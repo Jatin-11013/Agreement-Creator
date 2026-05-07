@@ -53,6 +53,12 @@ if annexure_b_choice == "Yes":
         if name:
             party_names.append(name)
 
+def remove_sect_pr(doc_obj):
+    body = doc_obj.element.body
+    for element in list(body):
+        if element.tag.endswith('}sectPr'):
+            body.remove(element)
+
 # -----------------------------
 # 2. GENERATION ENGINE
 # -----------------------------
@@ -90,12 +96,15 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
             if annexure_a_choice == "Yes" and os.path.exists(ann_a_path):
                 sub_a_doc = Document()
                 sub_a_doc.add_page_break()  # force new page
+                sub_a_doc.add_heading("ANNEXURE A – AERTRIP FEES", level=1)
+
                 source_a = Document(ann_a_path)
                 for element in source_a.element.body:
-                    # skip section properties so footer doesn't change
                     if element.tag.endswith('}sectPr'):
                         continue
                     sub_a_doc.element.body.append(element)
+
+                remove_sect_pr(sub_a_doc)
 
                 a_buf = io.BytesIO()
                 sub_a_doc.save(a_buf)
@@ -111,6 +120,8 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
                 sub_b_doc.add_heading("ANNEXURE B - CLIENT'S ENTITIES", level=1)
                 for i, name in enumerate(party_names, 1):
                     sub_b_doc.add_paragraph(f"{i}. {name}")
+
+                remove_sect_pr(sub_b_doc)
 
                 b_buf = io.BytesIO()
                 sub_b_doc.save(b_buf)
