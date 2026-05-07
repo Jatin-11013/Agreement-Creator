@@ -1,8 +1,6 @@
 import streamlit as st
 from docxtpl import DocxTemplate
-from docx import Document as DocxDocument
 from docx import Document
-from docx.oxml.ns import qn
 import io
 import os
 from datetime import date
@@ -66,6 +64,10 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
 
             doc = DocxTemplate(template_path)
 
+            # Conditional Lines for Preamble
+            ann_a_line = "The implications of Aertrip Fees are outlined in Annexure A." if annexure_a_choice == "Yes" else ""
+            ann_b_line = "and its related entities as mentioned in Annexure B" if annexure_b_choice == "Yes" else ""
+
             context = {
                 "org_name": org_name,
                 "date": doc_date.strftime('%d %B %Y'),
@@ -77,78 +79,50 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
                 "org_sign_designation": org_designation,
                 "aer_sign_name": aer_sign_name,
                 "aer_sign_designation": aer_designation,
-                "annexure_a_line": "The implications of Aertrip Fees are outlined in Annexure A." if annexure_a_choice == "Yes" else "",
-                "annexure_b_line": "and its related entities as mentioned in Annexure B" if annexure_b_choice == "Yes" else ""
+                "annexure_a_line": ann_a_line,
+                "annexure_b_line": ann_b_line
             }
 
-            # --- Annexure A ---
+            # --- Handle Annexure A ---
             if annexure_a_choice == "Yes" and os.path.exists(ann_a_path):
-                sub_doc_a = doc.new_subdoc(ann_a_path)
-                context["annexure_a_section"] = sub_doc_a
+                # Annexure A hamesha naye page se shuru ho
+                sub_a_doc = Document()
+                sub_a_doc.add_page_break()
+                # Annexure A ka content copy karna
+                source_a = Document(ann_a_path)
+                for element in source_a.element.body:
+                    sub_a_doc.element.body.append(element)
+                
+                a_buf = io.BytesIO()
+                sub_a_doc.save(a_buf)
+                a_buf.seek(0)
+                context["annexure_a_section"] = doc.new_subdoc(a_buf)
             else:
                 context["annexure_a_section"] = ""
 
-            # --- Annexure B ---
+            # --- Handle Annexure B ---
             if annexure_b_choice == "Yes" and party_names:
-                b_buffer = io.BytesIO()
-                temp_b_doc = Document()
-                temp_b_doc.add_page_break()
-                temp_b_doc.add_heading("ANNEXURE B - CLIENT'S ENTITIES", level=1)
+                sub_b_doc = Document()
+                sub_b_doc.add_page_break()
+                sub_b_doc.add_heading("ANNEXURE B - CLIENT'S ENTITIES", level=1)
                 for i, name in enumerate(party_names, 1):
-                    temp_b_doc.add_paragraph(f"{i}. {name}")
-                temp_b_doc.save(b_buffer)
-                b_buffer.seek(0)
-                context["annexure_b_section"] = doc.new_subdoc(b_buffer)
+                    sub_b_doc.add_paragraph(f"{i}. {name}")
+                
+                b_buf = io.BytesIO()
+                sub_b_doc.save(b_buf)
+                b_buf.seek(0)
+                context["annexure_b_section"] = doc.new_subdoc(b_buf)
             else:
                 context["annexure_b_section"] = ""
 
-            # --- Render ---
+            # Render and Save
             doc.render(context)
-
-            # --- BLANK PAGE FIX ---
-            temp_buffer = io.BytesIO()
-            doc.save(temp_buffer)
-            temp_buffer.seek(0)
-
-            clean_doc = DocxDocument(temp_buffer)
-            body = clean_doc.element.body
-            children = list(body)
-
-            i = 0
-            while i < len(children):
-                elem = children[i]
-                if not elem.tag.endswith('}p'):
-                    i += 1
-                    continue
-
-                text = ''.join(
-                    t.text or ''
-                    for t in elem.iter('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t')
-                ).strip()
-
-                elem_xml = elem.xml if hasattr(elem, 'xml') else ''
-                is_page_break_para = 'w:type="page"' in elem_xml and text == ''
-
-                if is_page_break_para:
-                    if i + 1 < len(children):
-                        next_elem = children[i + 1]
-                        next_text = ''.join(
-                            t.text or ''
-                            for t in next_elem.iter('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t')
-                        ).strip()
-                        if next_text == '' and next_elem.tag.endswith('}p'):
-                            body.remove(elem)
-                            body.remove(next_elem)
-                            children = list(body)
-                            continue
-                i += 1
-
-            # --- Final Save ---
+            
             final_buffer = io.BytesIO()
-            clean_doc.save(final_buffer)
+            doc.save(final_buffer)
             final_buffer.seek(0)
 
-            st.success("✅ Agreement generated!")
+            st.success("✅ Agreement generated successfully!")
             st.download_button(
                 label="📥 Download Word File",
                 data=final_buffer,
