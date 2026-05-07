@@ -53,14 +53,6 @@ if annexure_b_choice == "Yes":
         if name:
             party_names.append(name)
 
-def remove_sect_pr(doc_obj):
-    body = doc_obj.element.body
-    if body is None:
-        return
-    for element in list(body):
-        if element.tag.endswith('}sectPr'):
-            body.remove(element)
-
 # -----------------------------
 # 2. GENERATION ENGINE
 # -----------------------------
@@ -102,14 +94,10 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
 
                 source_a = Document(ann_a_path)
                 for element in source_a.element.body:
+                    # skip section properties so footer doesn't change
                     if element.tag.endswith('}sectPr'):
                         continue
                     sub_a_doc.element.body.append(element)
-
-                remove_sect_pr(sub_a_doc)
-
-                if len(sub_a_doc.element.body) == 0:
-                    sub_a_doc.add_paragraph("")
 
                 a_buf = io.BytesIO()
                 sub_a_doc.save(a_buf)
@@ -126,10 +114,10 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
                 for i, name in enumerate(party_names, 1):
                     sub_b_doc.add_paragraph(f"{i}. {name}")
 
-                remove_sect_pr(sub_b_doc)
-
-                if len(sub_b_doc.element.body) == 0:
-                    sub_b_doc.add_paragraph("")
+                # remove section properties so numbering doesn't restart
+                for element in list(sub_b_doc.element.body):
+                    if element.tag.endswith('}sectPr'):
+                        sub_b_doc.element.body.remove(element)
 
                 b_buf = io.BytesIO()
                 sub_b_doc.save(b_buf)
