@@ -75,7 +75,7 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
                 "org_sign_designation": org_designation,
                 "aer_sign_name": aer_sign_name,
                 "aer_sign_designation": aer_designation,
-                "annexure_a_line": "The implications of Aertrip Fees are outlined in Annexure A" if annexure_a_choice == "Yes" else "",
+                "annexure_a_line": "The implications of Aertrip Fees are outlined in Annexure A." if annexure_a_choice == "Yes" else "",
                 "annexure_b_line": "and its related entities as mentioned in Annexure B" if annexure_b_choice == "Yes" else ""
             }
 
