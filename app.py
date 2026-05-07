@@ -1,6 +1,8 @@
 import streamlit as st
 from docxtpl import DocxTemplate
+from docx import Document as DocxDocument
 from docx import Document
+from docx.oxml.ns import qn
 import io
 import os
 from datetime import date
@@ -79,21 +81,19 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
                 "annexure_b_line": "and its related entities as mentioned in Annexure B" if annexure_b_choice == "Yes" else ""
             }
 
-            # --- Annexure A (Direct Insertion) ---
+            # --- Annexure A ---
             if annexure_a_choice == "Yes" and os.path.exists(ann_a_path):
-                # Aapne heading file mein add kar di hai, toh hum direct file uthayenge
                 sub_doc_a = doc.new_subdoc(ann_a_path)
                 context["annexure_a_section"] = sub_doc_a
             else:
                 context["annexure_a_section"] = ""
 
-            # --- Annexure B (Dynamic with Page Break control) ---
+            # --- Annexure B ---
             if annexure_b_choice == "Yes" and party_names:
                 b_buffer = io.BytesIO()
                 temp_b_doc = Document()
-                # Page break sirf tab jab document continue ho raha ho
                 temp_b_doc.add_page_break()
-                temp_b_doc.add_heading("ANNEXURE B - CLIENT’S ENTITIES", level=1)
+                temp_b_doc.add_heading("ANNEXURE B - CLIENT'S ENTITIES", level=1)
                 for i, name in enumerate(party_names, 1):
                     temp_b_doc.add_paragraph(f"{i}. {name}")
                 temp_b_doc.save(b_buffer)
@@ -102,11 +102,50 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
             else:
                 context["annexure_b_section"] = ""
 
-            # Final Render
+            # --- Render ---
             doc.render(context)
 
+            # --- BLANK PAGE FIX ---
+            temp_buffer = io.BytesIO()
+            doc.save(temp_buffer)
+            temp_buffer.seek(0)
+
+            clean_doc = DocxDocument(temp_buffer)
+            body = clean_doc.element.body
+            children = list(body)
+
+            i = 0
+            while i < len(children):
+                elem = children[i]
+                if not elem.tag.endswith('}p'):
+                    i += 1
+                    continue
+
+                text = ''.join(
+                    t.text or ''
+                    for t in elem.iter('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t')
+                ).strip()
+
+                elem_xml = elem.xml if hasattr(elem, 'xml') else ''
+                is_page_break_para = 'w:type="page"' in elem_xml and text == ''
+
+                if is_page_break_para:
+                    if i + 1 < len(children):
+                        next_elem = children[i + 1]
+                        next_text = ''.join(
+                            t.text or ''
+                            for t in next_elem.iter('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t')
+                        ).strip()
+                        if next_text == '' and next_elem.tag.endswith('}p'):
+                            body.remove(elem)
+                            body.remove(next_elem)
+                            children = list(body)
+                            continue
+                i += 1
+
+            # --- Final Save ---
             final_buffer = io.BytesIO()
-            doc.save(final_buffer)
+            clean_doc.save(final_buffer)
             final_buffer.seek(0)
 
             st.success("✅ Agreement generated!")
