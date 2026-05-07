@@ -55,6 +55,8 @@ if annexure_b_choice == "Yes":
 
 def remove_sect_pr(doc_obj):
     body = doc_obj.element.body
+    if body is None:
+        return
     for element in list(body):
         if element.tag.endswith('}sectPr'):
             body.remove(element)
@@ -106,6 +108,9 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
 
                 remove_sect_pr(sub_a_doc)
 
+                if len(sub_a_doc.element.body) == 0:
+                    sub_a_doc.add_paragraph("")
+
                 a_buf = io.BytesIO()
                 sub_a_doc.save(a_buf)
                 a_buf.seek(0)
@@ -122,6 +127,9 @@ if st.button("🚀 Generate & Download Agreement", type="primary"):
                     sub_b_doc.add_paragraph(f"{i}. {name}")
 
                 remove_sect_pr(sub_b_doc)
+
+                if len(sub_b_doc.element.body) == 0:
+                    sub_b_doc.add_paragraph("")
 
                 b_buf = io.BytesIO()
                 sub_b_doc.save(b_buf)
